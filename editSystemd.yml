@@ -1,0 +1,19 @@
+---
+- hosts: HostsToEdit      
+  remote_user: root
+  tasks:
+
+  - name: Edit systemd
+    blockinfile:
+      path: /etc/systemd/system/{{ item }}
+      insertafter: "EnvironmentFile="
+      block: |
+        Restart=always
+        RestartSec=30
+    with_items:
+      - example1.service
+      - example2.service
+
+  - name: Reload daemon
+    systemd:
+      daemon_reload: yes
