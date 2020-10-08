@@ -1,0 +1,28 @@
+---
+- hosts: HostsToCheck
+  remote_user: root
+  serial: 1
+  tasks:
+
+  - name: Insert to grub.cfg
+    become: true
+    lineinfile:
+      path: /etc/default/grub
+      state: present
+      line: GRUB_CMDLINE_LINUX="transparent_hugepage=never"
+
+  - name: Update Kernel
+    become: true
+    shell: yum update kernel -y   
+    
+  - pause: 
+      seconds: 5
+
+  - name: Set default boot kernel
+    become: true
+    shell: grub2-set-default 0
+  
+  - name: Reload grub
+    become: true
+    shell: grub2-mkconfig -o /boot/grub2/grub.cfg
+
