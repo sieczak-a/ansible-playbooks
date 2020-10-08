@@ -1,0 +1,11 @@
+- hosts: HostsToDeliver
+  remote_user: root
+  tasks:
+
+  - name: Add ssh key
+    authorized_key:
+      user: exampleUser
+      state: present
+      key: "{{ lookup('file', '/etc/ansible/sshkey.pub') }}"
+      path: /home/exampleUser/.ssh/authorized_keys
+      manage_dir: False
