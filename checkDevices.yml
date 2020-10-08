@@ -1,0 +1,44 @@
+---
+- hosts: HostsToCheck
+  remote_user: root
+  serial: 1
+  vars:
+    disc1: sdb
+    disc2: sdc
+
+  tasks:
+    - name: Check Scheduler
+      become_user: root
+      command: cat /sys/block/"{{disc1}}"/queue/scheduler
+      register: dir_out
+      
+    - name: print SD_B
+      become_user: root
+      debug: var={{item}}
+      with_items: dir_out.stdout_lines
+
+    - name: Check Scheduler
+      become_user: root
+      command: cat /sys/block/"{{disc2}}"/queue/scheduler
+      register: dir_out
+      
+    - name: print SD_C
+      become_user: root
+      debug: var={{item}}
+      with_items: dir_out.stdout_lines
+
+    - name: Check Running Kernel
+      shell:  uname -a
+      register: result
+    - debug:
+       msg: '{{ item }}'
+      loop: '{{ result.stdout | from_yaml_all | list }}'
+
+    - name: Check THP
+      command: cat /sys/kernel/mm/transparent_hugepage/enabled
+      register: dir_out
+
+    - name: print THP
+      become_user: root
+      debug: var={{item}}
+      with_items: dir_out.stdout_lines
