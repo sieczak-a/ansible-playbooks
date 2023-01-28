@@ -1,0 +1,80 @@
+---
+# Kubeadm cluster upgrade playbook
+#
+# Based on:
+# https://v1-23.docs.kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/
+#
+# Master nodes should be upgraded manually
+# Draining nodes not included in this playbook
+
+
+- name: Kubernetes cluster upgrade - worker nodes
+  hosts: hosts_to_configure 
+  vars:
+    version: 1.23.15-00
+    version_format: v1.23.15
+  gather_facts: False
+  become: yes
+  serial: 1
+  tasks:
+
+    - name: Upgrade kubeadm
+      ansible.builtin.apt:
+        name: "kubeadm={{ version }}"
+        state: present
+        update_cache: yes
+        allow_change_held_packages: true
+
+    - name: Upgrade node
+      ansible.builtin.command: kubeadm upgrade node
+      register: result
+
+    - name: Print the full output
+      ansible.builtin.debug:
+        var: result
+
+    - ansible.builtin.pause:
+        prompt: "Wait for stabilization.."
+        seconds: 5
+
+    - name: Kubeadm - check version
+      ansible.builtin.command: kubeadm version -o short
+      register: version_kubeadm
+
+    - name: Upgrade kubelet and kubectl
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        allow_change_held_packages: true
+        allow_downgrade: true
+      with_items:
+        - "kubelet={{ version }}"
+        - "kubectl={{ version }}"
+      when: version_kubeadm.stdout == version_format
+
+    - name: Kubelet - check version
+      ansible.builtin.command: kubelet --version
+      register: version_kubelet
+
+    - name: Kubelet - print version
+      ansible.builtin.debug:
+        var: version_kubelet.stdout
+
+    - name: Kubectl - check version
+      ansible.builtin.command: kubectl version --client --short=true
+      register: version_kubectl
+
+    - name: Kubectl - print version
+      ansible.builtin.debug:
+        var: version_kubectl.stdout
+
+    - name: Daemon-reload & restart kubelet
+      ansible.builtin.systemd:
+        state: restarted
+        daemon_reload: yes
+        name: kubelet
+      when: version_kubelet.stdout is search('v1.23.15')
+
+    - ansible.builtin.pause:
+        prompt: "Wait for stabilization.."
+        seconds: 15
