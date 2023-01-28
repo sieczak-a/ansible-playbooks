@@ -1,0 +1,40 @@
+---
+- name: "Configure ssh"
+  hosts: hosts_to_configure 
+  become: yes
+  tasks:
+
+    - name: backup once
+      copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config_backup_{{ansible_date_time.iso8601}}
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+
+    - name: Configure sshd
+      lineinfile:
+        path: "/etc/ssh/sshd_config"
+        regex: "^(#)?{{item.key}}"
+        line: "{{item.key}} {{item.value}}"
+        state: present
+      loop:
+        - { key: "AllowTcpForwarding", value: "no" }
+        - { key: "ClientAliveCountMax", value: "2" }
+        - { key: "Compression", value: "no" }
+        - { key: "GatewayPorts", value: "no" }
+        - { key: "LogLevel", value: "VERBOSE" }
+        - { key: "MaxAuthTries", value: "1" }
+        - { key: "MaxSessions", value: "2" }
+        - { key: "TCPKeepAlive", value: "no" }
+        - { key: "X11Forwarding", value: "no" }
+        - { key: "AllowAgentForwarding", value: "no" }
+      notify:
+        - restart sshd
+
+  handlers:
+    - name: restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
